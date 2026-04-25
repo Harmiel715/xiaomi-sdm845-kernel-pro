@@ -54,6 +54,10 @@ extern bool susfs_is_inode_sus_path(struct inode *inode);
 extern const struct qstr susfs_fake_qstr_name;
 #endif
 
+#ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT
+extern struct filename *susfs_open_redirect_spoof_do_sys_openat(struct inode *inode);
+#endif
+
 /* [Feb-1997 T. Schoebel-Theuer]
  * Fundamental changes in the pathname lookup mechanisms (namei)
  * were necessary because of omirr.  The reason is that omirr needs
@@ -1703,7 +1707,7 @@ static int lookup_fast(struct nameidata *nd,
 	int status = 1;
 	int err;
 #ifdef CONFIG_KSU_SUSFS_SUS_PATH
-	bool is_nd_state_lookup_last_and_open_last = (nd->state & (ND_STATE_LOOKUP_LAST | ND_STATE_OPEN_LAST));
+	bool is_nd_state_lookup_last_and_open_last = (nd && (nd->state & (ND_STATE_LOOKUP_LAST | ND_STATE_OPEN_LAST)));
 #endif
 
 	/*
@@ -1716,7 +1720,7 @@ static int lookup_fast(struct nameidata *nd,
 		bool negative;
 		dentry = __d_lookup_rcu(parent, &nd->last, &seq);
 #ifdef CONFIG_KSU_SUSFS_SUS_PATH
-		if (is_nd_state_lookup_last_and_open_last && dentry && !IS_ERR(dentry) && dentry->d_inode &&
+		if (nd && (nd->state & (ND_STATE_LOOKUP_LAST | ND_STATE_OPEN_LAST)) && dentry && !IS_ERR(dentry) && dentry->d_inode &&
 			susfs_is_inode_sus_path(dentry->d_inode))
 		{
 			if (d_in_lookup(dentry))
@@ -1775,7 +1779,7 @@ static int lookup_fast(struct nameidata *nd,
 	} else {
 		dentry = __d_lookup(parent, &nd->last);
 #ifdef CONFIG_KSU_SUSFS_SUS_PATH
-		if (is_nd_state_lookup_last_and_open_last && dentry && !IS_ERR(dentry) && dentry->d_inode &&
+		if (nd && (nd->state & (ND_STATE_LOOKUP_LAST | ND_STATE_OPEN_LAST)) && dentry && !IS_ERR(dentry) && dentry->d_inode &&
 			susfs_is_inode_sus_path(dentry->d_inode))
 		{
 			if (d_in_lookup(dentry))
@@ -1816,6 +1820,10 @@ static struct dentry *lookup_slow(const struct qstr *name,
 	struct dentry *dentry = ERR_PTR(-ENOENT), *old;
 	struct inode *inode = dir->d_inode;
 	DECLARE_WAIT_QUEUE_HEAD_ONSTACK(wq);
+#ifdef CONFIG_KSU_SUSFS_SUS_PATH
+	bool found_sus_path = false;
+	struct nameidata *nd = current->nameidata;
+#endif
 
 	inode_lock_shared(inode);
 	/* Don't go there if it's already dead */
@@ -1823,6 +1831,9 @@ static struct dentry *lookup_slow(const struct qstr *name,
 		goto out;
 again:
 	dentry = d_alloc_parallel(dir, name, &wq);
+#ifdef CONFIG_KSU_SUSFS_SUS_PATH
+retry:
+#endif
 	if (IS_ERR(dentry))
 		goto out;
 	if (unlikely(!d_in_lookup(dentry))) {
@@ -1849,6 +1860,17 @@ again:
 	}
 out:
 	inode_unlock_shared(inode);
+#ifdef CONFIG_KSU_SUSFS_SUS_PATH
+	if (nd && (nd->state & (ND_STATE_LOOKUP_LAST | ND_STATE_OPEN_LAST)) &&
+		!found_sus_path && dentry && !IS_ERR(dentry) && dentry->d_inode &&
+		susfs_is_inode_sus_path(dentry->d_inode))
+	{
+		dput(dentry);
+		dentry = d_alloc(dir, &susfs_fake_qstr_name);
+		found_sus_path = true;
+		goto retry;
+	}
+#endif
 	return dentry;
 }
 
@@ -3456,6 +3478,9 @@ static int do_last(struct nameidata *nd,
 
 	nd->flags &= ~LOOKUP_PARENT;
 	nd->flags |= op->intent;
+#ifdef CONFIG_KSU_SUSFS_SUS_PATH
+	nd->state |= ND_STATE_OPEN_LAST;
+#endif
 
 	if (nd->last_type != LAST_NORM) {
 		error = handle_dots(nd, nd->last_type);
@@ -3765,14 +3790,44 @@ struct file *do_filp_open(int dfd, struct filename *pathname,
 	struct nameidata nd;
 	int flags = op->lookup_flags;
 	struct file *filp;
+#ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT
+	struct filename *fake_filename = NULL;
+	struct filename *tmp = pathname;
+	bool is_inode_open_redirect = false;
 
-	set_nameidata(&nd, dfd, pathname);
+retry:
+#endif
+
+	set_nameidata(&nd, dfd, tmp);
 	filp = path_openat(&nd, op, flags | LOOKUP_RCU);
 	if (unlikely(filp == ERR_PTR(-ECHILD)))
 		filp = path_openat(&nd, op, flags);
 	if (unlikely(filp == ERR_PTR(-ESTALE)))
 		filp = path_openat(&nd, op, flags | LOOKUP_REVAL);
+
+#ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT
+	if (!is_inode_open_redirect && filp && !IS_ERR(filp)) {
+		struct inode *inode = file_inode(filp);
+		if (SUSFS_IS_INODE_OPEN_REDIRECT_WITHOUT_UID_CHECK(inode)) {
+			fake_filename = susfs_open_redirect_spoof_do_sys_openat(inode);
+			if (fake_filename && !IS_ERR(fake_filename)) {
+				is_inode_open_redirect = true;
+				filp_close(filp, NULL);
+				if (tmp != pathname)
+					putname(tmp);
+				tmp = fake_filename;
+				restore_nameidata();
+				goto retry;
+			}
+		}
+	}
+#endif
+
 	restore_nameidata();
+#ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT
+	if (tmp != pathname)
+		putname(tmp);
+#endif
 	return filp;
 }
 

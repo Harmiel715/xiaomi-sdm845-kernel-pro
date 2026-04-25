@@ -54,6 +54,7 @@ void susfs_add_sus_path(void __user **user_info) {
 		info.err = -EFAULT;
 		goto out_copy_to_user;
 	}
+	info.target_pathname[SUSFS_MAX_LEN_PATHNAME - 1] = '\0';
 
 	info.err = kern_path(info.target_pathname, LOOKUP_FOLLOW, &path);
 	if (info.err) {
@@ -61,14 +62,14 @@ void susfs_add_sus_path(void __user **user_info) {
 		goto out_copy_to_user;
 	}
 
-	inode = d_backing_inode(path.dentry);
+	inode = d_inode(path.dentry);
 	if (!inode || !inode->i_mapping) {
 		SUSFS_LOGE("inode || inode->i_mapping is NULL\n");
 		info.err = -ENOENT;
 		goto out_path_put_path;
 	}
 
-	if (inode->i_sb->s_magic == FUSE_SUPER_MAGIC) {
+	if (inode->i_sb && inode->i_sb->s_magic == FUSE_SUPER_MAGIC) {
 		fi = get_fuse_inode(inode);
 		if (!fi || !fi->inode.i_mapping) {
 			SUSFS_LOGE("fi || fi->inode.i_mapping is NULL\n");
@@ -104,6 +105,7 @@ void susfs_add_sus_path_loop(void __user **user_info) {
 		info.err = -EFAULT;
 		goto out_copy_to_user;
 	}
+	info.target_pathname[SUSFS_MAX_LEN_PATHNAME - 1] = '\0';
 
 	if (*info.target_pathname == '\0') {
 		SUSFS_LOGE("target_pathname cannot be empty\n");
@@ -147,7 +149,7 @@ void susfs_run_sus_path_loop(void) {
 				path_put(&path);
 				continue;
 			}
-			if (inode->i_sb->s_magic == FUSE_SUPER_MAGIC) {
+			if (inode->i_sb && inode->i_sb->s_magic == FUSE_SUPER_MAGIC) {
 				fi = get_fuse_inode(inode);
 				if (!fi || !fi->inode.i_mapping) {
 					SUSFS_LOGE("fi || fi->inode.i_mapping is NULL\n");
@@ -190,7 +192,7 @@ bool susfs_is_inode_sus_path(struct inode *inode)
 		SUSFS_LOGE("inode->i_mapping is NULL\n");
 		return false;
 	}
-	if (inode->i_sb->s_magic == FUSE_SUPER_MAGIC) {
+	if (inode->i_sb && inode->i_sb->s_magic == FUSE_SUPER_MAGIC) {
 		fi = get_fuse_inode(inode);
 		if (!fi || !fi->inode.i_mapping) {
 			SUSFS_LOGE("fi || fi->inode.i_mapping is NULL\n");
@@ -283,7 +285,7 @@ static int susfs_mark_inode_sus_kstat(char *target_pathname, struct st_susfs_sus
 		goto out_path_put_path;
 	}
 
-	if (inode->i_sb->s_magic == FUSE_SUPER_MAGIC) {
+	if (inode->i_sb && inode->i_sb->s_magic == FUSE_SUPER_MAGIC) {
 		fi = get_fuse_inode(inode);
 		if (!fi || !fi->inode.i_mapping) {
 			SUSFS_LOGE("fi || fi->inode.i_mapping is NULL\n");
@@ -319,6 +321,7 @@ void susfs_add_sus_kstat(void __user **user_info) {
 		info.err = -EFAULT;
 		goto out_copy_to_user;
 	}
+	info.target_pathname[SUSFS_MAX_LEN_PATHNAME - 1] = '\0';
 
 	if (*info.target_pathname == '\0') {
 		info.err = -EINVAL;
@@ -364,7 +367,7 @@ void susfs_add_sus_kstat(void __user **user_info) {
 					new_entry->info.spoofed_atime_tv_nsec, new_entry->info.spoofed_mtime_tv_nsec, new_entry->info.spoofed_ctime_tv_nsec,
 					new_entry->info.spoofed_blksize, new_entry->info.spoofed_blocks);
 #else
-			SUSFS_LOGI("is_fuse: %d, is_statically: '%d', target_ino: '%lu', target_pathname: '%s', spoofed_ino: '%lu', spoofed_dev: '%lu', spoofed_nlink: '%u', spoofed_size: '%u', spoofed_atime_tv_sec: '%ld', spoofed_mtime_tv_sec: '%ld', spoofed_ctime_tv_sec: '%ld', spoofed_atime_tv_nsec: '%ld', spoofed_mtime_tv_nsec: '%ld', spoofed_ctime_tv_nsec: '%ld', spoofed_blksize: '%lu', spoofed_blocks: '%llu', is successfully added to SUS_KSTAT_HLIST\n",
+			SUSFS_LOGI("is_fuse: %d, is_statically: '%d', target_ino: '%lu', target_pathname: '%s', spoofed_ino: '%lu', spoofed_dev: '%lu', spoofed_nlink: '%u', spoofed_size: '%llu', spoofed_atime_tv_sec: '%ld', spoofed_mtime_tv_sec: '%ld', spoofed_ctime_tv_sec: '%ld', spoofed_atime_tv_nsec: '%ld', spoofed_mtime_tv_nsec: '%ld', spoofed_ctime_tv_nsec: '%ld', spoofed_blksize: '%lu', spoofed_blocks: '%llu', is successfully added to SUS_KSTAT_HLIST\n",
 					new_entry->is_fuse,
 					new_entry->info.is_statically, new_entry->info.target_ino, new_entry->info.target_pathname,
 					new_entry->info.spoofed_ino, new_entry->info.spoofed_dev,
@@ -401,7 +404,7 @@ void susfs_add_sus_kstat(void __user **user_info) {
 			new_entry->info.spoofed_atime_tv_nsec, new_entry->info.spoofed_mtime_tv_nsec, new_entry->info.spoofed_ctime_tv_nsec,
 			new_entry->info.spoofed_blksize, new_entry->info.spoofed_blocks);
 #else
-	SUSFS_LOGI("is_fuse: %d, is_statically: '%d', target_ino: '%lu', target_pathname: '%s', spoofed_ino: '%lu', spoofed_dev: '%lu', spoofed_nlink: '%u', spoofed_size: '%u', spoofed_atime_tv_sec: '%ld', spoofed_mtime_tv_sec: '%ld', spoofed_ctime_tv_sec: '%ld', spoofed_atime_tv_nsec: '%ld', spoofed_mtime_tv_nsec: '%ld', spoofed_ctime_tv_nsec: '%ld', spoofed_blksize: '%lu', spoofed_blocks: '%llu', is successfully added to SUS_KSTAT_HLIST\n",
+	SUSFS_LOGI("is_fuse: %d, is_statically: '%d', target_ino: '%lu', target_pathname: '%s', spoofed_ino: '%lu', spoofed_dev: '%lu', spoofed_nlink: '%u', spoofed_size: '%llu', spoofed_atime_tv_sec: '%ld', spoofed_mtime_tv_sec: '%ld', spoofed_ctime_tv_sec: '%ld', spoofed_atime_tv_nsec: '%ld', spoofed_mtime_tv_nsec: '%ld', spoofed_ctime_tv_nsec: '%ld', spoofed_blksize: '%lu', spoofed_blocks: '%llu', is successfully added to SUS_KSTAT_HLIST\n",
 			new_entry->is_fuse,
 			new_entry->info.is_statically, new_entry->info.target_ino, new_entry->info.target_pathname,
 			new_entry->info.spoofed_ino, new_entry->info.spoofed_dev,
@@ -434,6 +437,7 @@ void susfs_update_sus_kstat(void __user **user_info) {
 		info.err = -EFAULT;
 		goto out_copy_to_user;
 	}
+	info.target_pathname[SUSFS_MAX_LEN_PATHNAME - 1] = '\0';
 
 	new_entry = kzalloc(sizeof(struct st_susfs_sus_kstat_hlist), GFP_KERNEL);
 	if (!new_entry) {
@@ -486,7 +490,10 @@ void susfs_sus_kstat_spoof_generic_fillattr(struct inode *inode, struct kstat *s
 	dev_t target_dev = 0;
 	bool is_fuse = false;
 
-	if (inode->i_sb->s_magic == FUSE_SUPER_MAGIC) {
+	if (!inode || IS_ERR(inode))
+		return;
+
+	if (inode->i_sb && inode->i_sb->s_magic == FUSE_SUPER_MAGIC) {
 		fi = get_fuse_inode(inode);
 		if (!fi || !fi->inode.i_mapping) {
 			SUSFS_LOGE("fi || fi->inode.i_mapping is NULL\n");
@@ -559,7 +566,10 @@ void susfs_sus_kstat_spoof_show_map_vma(struct inode *inode, dev_t *out_dev, uns
 	dev_t target_dev = 0;
 	bool is_fuse = false;
 
-	if (inode->i_sb->s_magic == FUSE_SUPER_MAGIC) {
+	if (!inode || IS_ERR(inode))
+		return;
+
+	if (inode->i_sb && inode->i_sb->s_magic == FUSE_SUPER_MAGIC) {
 		fi = get_fuse_inode(inode);
 		if (!fi || !fi->inode.i_mapping) {
 			SUSFS_LOGE("fi || fi->inode.i_mapping is NULL\n");
@@ -775,6 +785,8 @@ void susfs_add_open_redirect(void __user **user_info) {
 		info.err = -EFAULT;
 		goto out_copy_to_user;
 	}
+	info.target_pathname[SUSFS_MAX_LEN_PATHNAME - 1] = '\0';
+	info.redirected_pathname[SUSFS_MAX_LEN_PATHNAME - 1] = '\0';
 
         if (*info.target_pathname == '\0') {
                 info.err = -EINVAL;
@@ -1096,10 +1108,11 @@ void susfs_add_sus_map(void __user **user_info) {
 	struct path path;
 	struct inode *inode = NULL;
 
-	if (copy_from_user(&info, (struct st_susfs_sus_map __user*)*user_info, sizeof(info))) {
+	if (copy_from_user(&info, (struct st_susfs_sus_path __user*)*user_info, sizeof(info))) {
 		info.err = -EFAULT;
 		goto out_copy_to_user;
 	}
+	info.target_pathname[SUSFS_MAX_LEN_PATHNAME - 1] = '\0';
 
 	info.err = kern_path(info.target_pathname, LOOKUP_FOLLOW, &path);
 	if (info.err) {
@@ -1107,7 +1120,7 @@ void susfs_add_sus_map(void __user **user_info) {
 		goto out_copy_to_user;
 	}
 
-	inode = d_backing_inode(path.dentry);
+	inode = d_inode(path.dentry);
 	if (!inode || !inode->i_mapping) {
 		SUSFS_LOGE("inode || inode->i_mapping is NULL\n");
 		info.err = -ENOENT;
@@ -1402,9 +1415,13 @@ static int add_mark_on_inode(struct inode *inode, u32 mask,
 
 static int susfs_sdcard_monitor_fn(void *data)
 {
-	struct cred *cred = prepare_creds();
+	struct cred *cred;
 	int ret = 0;
 
+	/* Wait longer to ensure SELinux and filesystems are fully ready */
+	ssleep(30);
+
+	cred = prepare_creds();
 	if (!cred) {
 		SUSFS_LOGE("failed to prepare creds!\n");
 		return -ENOMEM;
@@ -1450,6 +1467,10 @@ void susfs_start_sdcard_monitor_fn(void) {
 
 /* susfs_init */
 void susfs_init(void) {
+	hash_init(SUS_KSTAT_HLIST);
+#ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT
+	hash_init(OPEN_REDIRECT_HLIST);
+#endif
 	SUSFS_LOGI("susfs is initialized! version: " SUSFS_VERSION " \n");
 }
 
