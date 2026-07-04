@@ -62,7 +62,7 @@ jobs:
           BUILD_DATE="$(date -u +'%Y-%m-%d')"
           echo "build_date=${BUILD_DATE}" >> "$GITHUB_OUTPUT"
 
-          KERNEL_VER="$(make O=out kernelversion 2>/dev/null || echo '4.9.337')"
+          KERNEL_VER="$(make -s O=out kernelversion 2>/dev/null || echo '4.9.337')"
           KSU_VER="$(cd KernelSU && git describe --tags --always 2>/dev/null || echo 'unknown')"
           SUSFS_VER="$(grep 'SUSFS_VERSION' include/linux/susfs.h 2>/dev/null | sed 's/.*"\(.*\)".*/\1/' || echo 'unknown')"
           COMMIT_SHORT="$(git rev-parse --short HEAD)"
