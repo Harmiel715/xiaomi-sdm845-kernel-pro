@@ -1,0 +1,63 @@
+name: Build equuleus kernel
+
+on:
+  schedule:
+    # Weekly: Saturday 03:17 UTC (off-peak, avoids Sunday midnight crush)
+    - cron: '17 3 * * 6'
+  workflow_dispatch:
+    inputs:
+      clean_cache:
+        description: 'Clear ccache before build'
+        type: boolean
+        default: false
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install toolchain
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq \
+            clang lld llvm \
+            gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu \
+            gcc-arm-linux-gnueabihf binutils-arm-linux-gnueabihf \
+            ccache zip
+
+      - name: Setup ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-equuleus-${{ github.run_number }}
+          restore-keys: |
+            ccache-equuleus-
+
+      - name: Clear ccache (if requested)
+        if: ${{ inputs.clean_cache }}
+        run: ccache -C -z
+
+      - name: Build kernel
+        run: |
+          export PATH="/usr/lib/ccache:$PATH"
+          ./build_for_equuleus.sh
+
+      - name: Upload AnyKernel3 zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: ak3-equuleus
+          path: AnyKernel3/ak3-equuleus.zip
+          retention-days: 14
+
+      - name: ccache stats
+        run: ccache -s

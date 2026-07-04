@@ -35,7 +35,8 @@ CROSS_COMPILE_COMPAT="arm-linux-gnueabihf-"
 for tool in clang llvm-ar aarch64-linux-gnu-objcopy arm-linux-gnueabihf-gcc; do
 	if ! command -v "$tool" >/dev/null 2>&1; then
 		echo "Missing required tool: $tool"
-		echo "Install with: sudo pacman -S clang lld aarch64-linux-gnu-binutils arm-linux-gnueabihf-binutils arm-linux-gnueabihf-gcc"
+		echo "Arch:  sudo pacman -S clang lld aarch64-linux-gnu-binutils arm-linux-gnueabihf-binutils arm-linux-gnueabihf-gcc"
+		echo "Debian/Ubuntu: sudo apt install clang lld gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu gcc-arm-linux-gnueabihf binutils-arm-linux-gnueabihf"
 		exit 1
 	fi
 done
