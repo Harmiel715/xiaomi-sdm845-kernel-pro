@@ -1,6 +1,6 @@
 [submodule "AnyKernel3"]
 	path = AnyKernel3
-	url = https://github.com/osm0sis/AnyKernel3.git
+	url = https://github.com/Harmiel715/AnyKernel3-equuleus.git
 [submodule "KernelSU"]
 	path = KernelSU
 	url = https://github.com/ReSukiSU/ReSukiSU.git
