@@ -66,8 +66,7 @@ This kernel is built from three config fragments:
 - **Droidspaces cgroup patch** — applied to `kernel/cgroup.c` for LXC compatibility
 - **4.9 config backport** — omitted options not present in this kernel version
 - **LLVM toolchain** — switched from broken zyc-clang19 to system clang + LLVM
-
-Detailed notes: [`README.equuleus.md`](README.equuleus.md)
+- **AnyKernel3** — configured for equuleus (A-only, UFS, device check)
 
 ## License
 
