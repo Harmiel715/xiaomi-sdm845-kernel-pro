@@ -1,6 +1,13 @@
 # Xiaomi SDM845 Kernel — Mi 8 Pro (equuleus)
 
-Linux 4.9.337 kernel for Xiaomi Mi 8 Pro (equuleus / ursa), adapted for LineageOS 22.x.
+Linux 4.9.337 kernel for Xiaomi Mi 8 Pro (equuleus).
+
+> [!CAUTION]
+> **This kernel is built for LineageOS 22.2 ONLY.**
+> Do NOT flash on any other ROM or LineageOS version — kernel interfaces
+> change between minor releases and a mismatch WILL cause bootloop or
+> hardware breakage. The author assumes **no responsibility** for any
+> damage, data loss, or thermonuclear war caused by flashing this kernel.
 
 [![Build equuleus kernel](https://github.com/Harmiel715/xiaomi-sdm845-kernel-pro/actions/workflows/build.yml/badge.svg)](https://github.com/Harmiel715/xiaomi-sdm845-kernel-pro/actions/workflows/build.yml)
 
