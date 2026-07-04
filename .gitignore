@@ -52,6 +52,9 @@ Module.symvers
 /vmlinuz
 /System.map
 /Module.markers
+/build.log
+/out/
+/pstore/
 
 #
 # Debian directory (make deb-pkg)
@@ -69,6 +72,7 @@ Module.symvers
 !.gitignore
 !.mailmap
 !.cocciconfig
+!.gitmodules
 
 #
 # Generated include files

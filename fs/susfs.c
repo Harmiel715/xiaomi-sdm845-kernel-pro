@@ -171,6 +171,12 @@ void susfs_run_sus_path_loop(void) {
 	srcu_read_unlock(&susfs_srcu_sus_path_loop, srcu_idx);
 }
 
+static void susfs_extra_work_handler(struct work_struct *work)
+{
+	susfs_run_sus_path_loop();
+}
+struct work_struct susfs_extra_works;
+
 static inline bool is_i_uid_not_allowed(uid_t i_uid) {
 	return likely(current_uid().val != i_uid);
 }
@@ -1471,6 +1477,7 @@ void susfs_init(void) {
 #ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT
 	hash_init(OPEN_REDIRECT_HLIST);
 #endif
+	INIT_WORK(&susfs_extra_works, susfs_extra_work_handler);
 	SUSFS_LOGI("susfs is initialized! version: " SUSFS_VERSION " \n");
 }
 
