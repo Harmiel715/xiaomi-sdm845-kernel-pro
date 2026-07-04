@@ -25,6 +25,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
+          fetch-depth: 0
 
       - name: Install toolchain
         run: |
@@ -52,12 +53,50 @@ jobs:
           export PATH="/usr/lib/ccache:$PATH"
           ./build_for_equuleus.sh
 
-      - name: Upload AnyKernel3 zip
-        uses: actions/upload-artifact@v4
+      - name: Prepare release metadata
+        id: meta
+        run: |
+          BUILD_DATE="$(date -u +'%Y-%m-%d')"
+          echo "build_date=${BUILD_DATE}" >> "$GITHUB_OUTPUT"
+
+          KERNEL_VER="$(make O=out kernelversion 2>/dev/null || echo '4.9.337')"
+          KSU_VER="$(cd KernelSU && git describe --tags --always 2>/dev/null || echo 'unknown')"
+          SUSFS_VER="$(grep 'SUSFS_VERSION' include/linux/susfs.h 2>/dev/null | sed 's/.*"\(.*\)".*/\1/' || echo 'unknown')"
+          COMMIT_SHORT="$(git rev-parse --short HEAD)"
+
+          cat > release.md << EOF
+          ## Xiaomi Mi 8 Pro (equuleus) — ${BUILD_DATE} Weekly Build
+
+          **Build date:** $(date -u +"%Y-%m-%d %H:%M UTC")
+          **Git commit:** [${COMMIT_SHORT}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
+
+          ### Included
+
+          | Component | Version |
+          |---|---|
+          | Linux kernel | ${KERNEL_VER} |
+          | ReSukiSU | ${KSU_VER} |
+          | SUSFS | ${SUSFS_VER} |
+          | Baseband Guard | enabled |
+          | Droidspaces | full support |
+
+          ### Flash instructions
+
+          1. Flash \`ak3-equuleus.zip\` via TWRP or OrangeFox
+          2. Install [susfs4ksu-module](https://github.com/sidex15/susfs4ksu-module) via KernelSU Manager
+          EOF
+
+          cat release.md
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
         with:
-          name: ak3-equuleus
-          path: AnyKernel3/ak3-equuleus.zip
-          retention-days: 14
+          name: "${{ steps.meta.outputs.build_date }} — Weekly Build"
+          tag_name: weekly-equuleus
+          body_path: release.md
+          files: AnyKernel3/ak3-equuleus.zip
+          prerelease: false
+          make_latest: true
 
       - name: ccache stats
         run: ccache -s
