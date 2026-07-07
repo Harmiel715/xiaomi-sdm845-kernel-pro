@@ -9,6 +9,7 @@ OUT_DIR="${OUT_DIR:-out}"
 DEFCONFIG="vendor/xiaomi/mi845_defconfig"
 DEVICE_CONFIG="arch/arm64/configs/vendor/xiaomi/equuleus.config"
 DROIDSPACES_CONFIG="arch/arm64/configs/vendor/xiaomi/droidspaces.config"
+VIRTIO_CONFIG="arch/arm64/configs/vendor/xiaomi/virtio.config"
 IMAGE="${OUT_DIR}/arch/arm64/boot/Image.gz-dtb"
 
 if [ ! -f KernelSU/kernel/Kconfig ]; then
@@ -52,6 +53,7 @@ make O="${OUT_DIR}" ARCH=arm64 mrproper
 make O="${OUT_DIR}" ARCH=arm64 "${DEFCONFIG}"
 scripts/kconfig/merge_config.sh -O "${OUT_DIR}/" "${OUT_DIR}/.config" "${DEVICE_CONFIG}"
 scripts/kconfig/merge_config.sh -O "${OUT_DIR}/" "${OUT_DIR}/.config" "${DROIDSPACES_CONFIG}"
+scripts/kconfig/merge_config.sh -O "${OUT_DIR}/" "${OUT_DIR}/.config" "${VIRTIO_CONFIG}"
 
 make -j"$(nproc)" -Orecurse O="${OUT_DIR}" ARCH=arm64 \
 	CC="${CC}" \
